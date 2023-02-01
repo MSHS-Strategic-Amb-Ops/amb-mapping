@@ -281,6 +281,22 @@ not_all_na <- function(x) all(!is.na(x)) # Exclude columns with All NAs
 ```
 
 
+```{r Reporting Variables, echo = FALSE, warning = FALSE, message = FALSE}
+
+report_run_date <- Sys.Date()
+# report_run_date <- "2022-08-10"
+reporting_week <- floor_date(as.Date(report_run_date, "%Y-%m-%d")-7, unit="week", week_start = 7)
+reporting_week_prior <- floor_date(as.Date(report_run_date, "%Y-%m-%d")-14, unit="week", week_start = 7)
+reporting_week_next <- floor_date(as.Date(report_run_date, "%Y-%m-%d"), unit="week", week_start = 7)
+
+reporting_year <- format(as.Date(report_run_date), "%Y")
+reporting_month <- format(as.Date(report_run_date), "%b")
+reporting_monthNum <- format(as.Date(report_run_date), "%m")
+
+
+```
+
+
 ```{r Import Data, echo = FALSE, warning = FALSE, message = FALSE}
 
 # Connection to Oracle DB ------------------------------------------------------
