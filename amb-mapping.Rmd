@@ -309,7 +309,8 @@ access_raw_tbl <- tbl(conn1, "MV_DM_PATIENT_ACCESS")
 amb_mapping <- tbl(conn1, in_schema("VILLEA04", "AMBULATORY_MAPPING"))
 amb_mapping <- amb_mapping %>%
   collect() %>%
-  arrange(CAMPUS, CAMPUS_SPECIALTY)
+  arrange(CAMPUS, CAMPUS_SPECIALTY) %>%
+  mutate(LAST_ARRIVED = as.character(LAST_ARRIVED))
 
 ```
 
