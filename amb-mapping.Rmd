@@ -349,7 +349,7 @@ htmltools::browsable(
     wrap = TRUE,
     searchable = TRUE,
     
-    groupBy = c("CAMPUS"),
+    groupBy = c("CAMPUS","CAMPUS_SPECIALTY"),
     elementId = "amb-download-table",
     
     columns = list(
