@@ -366,7 +366,7 @@ htmltools::browsable(
     
     DEPARTMENT_OLD = colDef(
       # footer = "Total",
-      name = "DepartmenT Name (Original)",
+      name = "Department Name (Original)",
       minWidth = 180),
     
     DEPARTMENT = colDef(
