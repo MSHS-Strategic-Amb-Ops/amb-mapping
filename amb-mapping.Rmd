@@ -1,6 +1,14 @@
 ---
 output:
-  html_document
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float:
+      collapsed: yes
+    fig_width: 7
+    fig_height: 6
+resource_files:
+- Logo/Mount_Sinai_Logo_H.png
 ---
 
 
@@ -166,7 +174,6 @@ suppressMessages({
   library(emojifont)
 })
 
-
 ```
 
 
@@ -300,17 +307,53 @@ reporting_monthNum <- format(as.Date(report_run_date), "%m")
 ```{r Import Data, echo = FALSE, warning = FALSE, message = FALSE}
 
 # Connection to Oracle DB ------------------------------------------------------
-conn1 <- dbPool(drv = odbc(), dsn = "OAO Cloud DB SoYoun", timeout = 30)
+# conn1 <- dbPool(drv = odbc(), dsn = "OAO Cloud DB SoYoun", timeout = 30)
+conn2 <- dbConnect(odbc(), 
+                  "Clarity_prod", 
+                  uid = "kweons01" , 
+                  pwd = "kweons01123$")
+
 
 # Import Slot Availability Data ------------------------------------------------
-slot_raw_tbl <- tbl(conn1, "Y_DM_BOOKED_FILLED_RATE")
-access_raw_tbl <- tbl(conn1, "MV_DM_PATIENT_ACCESS")
+# slot_raw_tbl <- tbl(conn1, "Y_DM_BOOKED_FILLED_RATE")
+# access_raw_tbl <- tbl(conn1, "MV_DM_PATIENT_ACCESS")
+# availability_raw_tbl <- tbl(conn2, "V_AVAILABILITY")
+# block_raw_tbl <- tbl(conn2, "AVAIL_BLOCK")
+# block_name_tbl <- tbl(conn2, "ZC_APPT_BLOCK")
+# orders_raw_tbl <- tbl(conn2, "ORDER_PROC")
 
-amb_mapping <- tbl(conn1, in_schema("VILLEA04", "AMBULATORY_MAPPING"))
+# Import Slot Availability Data ------------------------------------------------
+# slot_raw_tbl <- tbl(conn1, "Y_DM_BOOKED_FILLED_RATE")
+# access_raw_tbl <- tbl(conn1, "MV_DM_PATIENT_ACCESS")
+
+# amb_mapping <- tbl(conn1, in_schema("VILLEA04", "AMBULATORY_MAPPING"))
+# 
+# amb_mapping <- amb_mapping %>%
+#   collect() %>%
+#   arrange(CAMPUS, CAMPUS_SPECIALTY) %>%
+#   mutate(LAST_ARRIVED = as.character(LAST_ARRIVED))
+
+
+# Using Clarity ----------------------------------------------------------------
+access_raw_tbl <- tbl(conn2, "MV_DM_PATIENT_ACCESS")
+amb_mapping <- access_raw_tbl %>%
+  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID) %>%
+  summarise(total = n()) %>%
+  collect()
+
+last_arrived <- access_raw_tbl %>%
+  filter(DERIVED_STATUS_DESC == "Arrived") %>%
+  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID) %>%
+  mutate(LAST_ARRIVED = max(APPT_DTTM)) %>%
+  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, LAST_ARRIVED) %>%
+  summarise(total = n()) %>%
+  collect()
+
+amb_mapping$LAST_ARRIVED <- last_arrived$LAST_ARRIVED[match(amb_mapping$DEPARTMENT_ID, last_arrived$DEPARTMENT_ID)]
 amb_mapping <- amb_mapping %>%
-  collect() %>%
-  arrange(CAMPUS, CAMPUS_SPECIALTY) %>%
-  mutate(LAST_ARRIVED = as.character(LAST_ARRIVED))
+  mutate(LAST_ARRIVED = as.character(LAST_ARRIVED)) %>%
+  rename(CAMPUS = SITE,
+         CAMPUS_SPECIALTY = DEPT_SPECIALTY_NAME)
 
 ```
 
@@ -321,11 +364,13 @@ knitr::include_graphics("Mount_Sinai_Logo_H.png")
 ```
 
 
-# Ambulatory Mapping (Grouper 17)
+# Ambulatory Audit Report
 *Data Run Date: `r report_run_date`*<br/>
 ___________________________________________________________________________________________________________________________________________________________________
 <br/>
 
+## Site Mapping (Grouper 17)
+<span style='font-size: 18px;; color: #d80b8c'>**Epic Site-Specialty-Department Mapping**</span>
 ```{r Ambulatory Mapping Output, echo = FALSE, warning = FALSE, message = FALSE}
 
 htmltools::browsable(
@@ -386,6 +431,29 @@ htmltools::browsable(
     )
   )
 )
+
+```
+
+
+## NY Zip Code Mapping
+<span style='font-size: 18px;; color: #d80b8c'>**NYS Zip Code Mapping for Ambulatory Analytics Tool Population (Unique Patients by Zip Code) Analysis**</span>
+```{r NYS Zip Code Analysis, echo = FALSE, warning = FALSE, message = FALSE}
+
+amb_zipcode_raw <- tbl(conn1, in_schema("VILLEA04", "ZIP_CODE_LAYER"))
+amb_zipcode <- amb_zipcode_raw %>%
+  collect()
+
+amb_population_raw <- tbl(conn1, in_schema("VILLEA04", "AMBULATORY_POPULATION"))
+amb_population_data <- amb_population_raw %>%
+  group_by(ZIP_CODE, NEW_ZIP, CITY, STATES, ZIP_CODE_LAYER_A, ZIP_CODE_LAYER_B, ZIP_CODE_LAYER_C, NEW_ZIP_CODE_LAYER_A, NEW_ZIP_CODE_LAYER_B) %>%
+  summarise(total = n()) %>%
+  collect()
+
+
+
+
+
+
 
 ```
 
