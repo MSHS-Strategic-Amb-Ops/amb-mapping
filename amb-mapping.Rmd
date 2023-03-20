@@ -353,7 +353,8 @@ amb_mapping$LAST_ARRIVED <- last_arrived$LAST_ARRIVED[match(amb_mapping$DEPARTME
 amb_mapping <- amb_mapping %>%
   mutate(LAST_ARRIVED = as.character(LAST_ARRIVED)) %>%
   rename(CAMPUS = SITE,
-         CAMPUS_SPECIALTY = DEPT_SPECIALTY_NAME)
+         CAMPUS_SPECIALTY = DEPT_SPECIALTY_NAME) %>%
+  arrange(CAMPUS, CAMPUS_SPECIALTY)
 
 ```
 
