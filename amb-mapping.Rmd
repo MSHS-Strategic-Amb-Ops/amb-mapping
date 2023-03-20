@@ -435,8 +435,8 @@ htmltools::browsable(
 ```
 
 
-## NY Zip Code Mapping
-<span style='font-size: 18px;; color: #d80b8c'>**NYS Zip Code Mapping for Ambulatory Analytics Tool Population (Unique Patients by Zip Code) Analysis**</span>
+<!-- ## NY Zip Code Mapping -->
+<!-- <span style='font-size: 18px;; color: #d80b8c'>**NYS Zip Code Mapping for Ambulatory Analytics Tool Population (Unique Patients by Zip Code) Analysis**</span> -->
 ```{r NYS Zip Code Analysis, echo = FALSE, warning = FALSE, message = FALSE}
 
 # amb_zipcode_raw <- tbl(conn1, in_schema("VILLEA04", "ZIP_CODE_LAYER"))
