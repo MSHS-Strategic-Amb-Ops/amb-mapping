@@ -439,21 +439,16 @@ htmltools::browsable(
 <span style='font-size: 18px;; color: #d80b8c'>**NYS Zip Code Mapping for Ambulatory Analytics Tool Population (Unique Patients by Zip Code) Analysis**</span>
 ```{r NYS Zip Code Analysis, echo = FALSE, warning = FALSE, message = FALSE}
 
-amb_zipcode_raw <- tbl(conn1, in_schema("VILLEA04", "ZIP_CODE_LAYER"))
-amb_zipcode <- amb_zipcode_raw %>%
-  collect()
-
-amb_population_raw <- tbl(conn1, in_schema("VILLEA04", "AMBULATORY_POPULATION"))
-amb_population_data <- amb_population_raw %>%
-  group_by(ZIP_CODE, NEW_ZIP, CITY, STATES, ZIP_CODE_LAYER_A, ZIP_CODE_LAYER_B, ZIP_CODE_LAYER_C, NEW_ZIP_CODE_LAYER_A, NEW_ZIP_CODE_LAYER_B) %>%
-  summarise(total = n()) %>%
-  collect()
-
-
-
-
-
-
+# amb_zipcode_raw <- tbl(conn1, in_schema("VILLEA04", "ZIP_CODE_LAYER"))
+# amb_zipcode <- amb_zipcode_raw %>%
+#   collect()
+# 
+# amb_population_raw <- tbl(conn1, in_schema("VILLEA04", "AMBULATORY_POPULATION"))
+# amb_population_data <- amb_population_raw %>%
+#   group_by(ZIP_CODE, NEW_ZIP, CITY, STATES, ZIP_CODE_LAYER_A, ZIP_CODE_LAYER_B, ZIP_CODE_LAYER_C, NEW_ZIP_CODE_LAYER_A, NEW_ZIP_CODE_LAYER_B) %>%
+#   summarise(total = n()) %>%
+#   collect()
+# 
 
 ```
 
