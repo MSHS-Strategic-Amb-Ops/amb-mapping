@@ -356,6 +356,8 @@ amb_mapping <- amb_mapping %>%
          CAMPUS_SPECIALTY = DEPT_SPECIALTY_NAME) %>%
   arrange(CAMPUS, CAMPUS_SPECIALTY)
 
+amb_mapping$total <- NULL
+
 ```
 
 
