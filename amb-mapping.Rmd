@@ -341,6 +341,14 @@ amb_mapping <- access_raw_tbl %>%
   summarise(total = n()) %>%
   collect()
 
+amb_mapping <- amb_mapping %>%
+  mutate(Department_Clean = ifelse(str_detect(DEPARTMENT_NAME, "_DEACTIVATED"),
+                             gsub('^.{2}|.{12}$', '', DEPARTMENT_NAME),
+                             ifelse(startsWith(DEPARTMENT_NAME,"X_X_"),
+                                    gsub('^.{4}', '', DEPARTMENT_NAME),
+                                    ifelse(startsWith(DEPARTMENT_NAME,"X_"),
+                                           gsub('^.{2}', '', DEPARTMENT_NAME), DEPARTMENT_NAME))))
+
 last_arrived <- access_raw_tbl %>%
   filter(DERIVED_STATUS_DESC == "Arrived") %>%
   group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID) %>%
@@ -354,7 +362,8 @@ amb_mapping <- amb_mapping %>%
   mutate(LAST_ARRIVED = as.character(LAST_ARRIVED)) %>%
   rename(CAMPUS = SITE,
          CAMPUS_SPECIALTY = DEPT_SPECIALTY_NAME) %>%
-  arrange(CAMPUS, CAMPUS_SPECIALTY)
+  arrange(CAMPUS, CAMPUS_SPECIALTY) %>%
+  dplyr::select(CAMPUS, CAMPUS_SPECIALTY, DEPARTMENT_NAME, Department_Clean, DEPARTMENT_ID, LAST_ARRIVED)
 
 amb_mapping$total <- NULL
 
@@ -412,12 +421,12 @@ htmltools::browsable(
       name = "Specialty",
       minWidth = 100),
     
-    DEPARTMENT_OLD = colDef(
+    DEPARTMENT_NAME = colDef(
       # footer = "Total",
       name = "Department Name (Original)",
       minWidth = 180),
     
-    DEPARTMENT = colDef(
+    Department_Clean = colDef(
       # footer = "Total",
       name = "Department Name (Consolidated)",
       minWidth = 180),
