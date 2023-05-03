@@ -337,7 +337,7 @@ conn2 <- dbConnect(odbc(),
 # Using Clarity ----------------------------------------------------------------
 access_raw_tbl <- tbl(conn2, "MV_DM_PATIENT_ACCESS")
 amb_mapping <- access_raw_tbl %>%
-  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID) %>%
+  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN) %>%
   summarise(total = n()) %>%
   collect()
 
@@ -363,7 +363,7 @@ amb_mapping <- amb_mapping %>%
   rename(CAMPUS = SITE,
          CAMPUS_SPECIALTY = DEPT_SPECIALTY_NAME) %>%
   arrange(CAMPUS, CAMPUS_SPECIALTY) %>%
-  dplyr::select(CAMPUS, CAMPUS_SPECIALTY, DEPARTMENT_NAME, Department_Clean, DEPARTMENT_ID, LAST_ARRIVED)
+  dplyr::select(CAMPUS, CAMPUS_SPECIALTY, DEPARTMENT_NAME, Department_Clean, DEPARTMENT_ID, LAST_ARRIVED, DEP_RPT_GRP_ELEVEN)
 
 amb_mapping$total <- NULL
 
@@ -437,7 +437,12 @@ htmltools::browsable(
     
     LAST_ARRIVED = colDef(
       # footer = "Total",
-      name = "Last Arrived Visit Date")
+      name = "Last Arrived Visit Date"),
+    
+    DEP_RPT_GRP_ELEVEN = colDef(
+      # footer = "Total",
+      name = "A28 vs. Non-A28")
+    
     )
 
     )
