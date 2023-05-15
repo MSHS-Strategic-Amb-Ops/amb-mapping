@@ -337,7 +337,7 @@ conn2 <- dbConnect(odbc(),
 # Using Clarity ----------------------------------------------------------------
 access_raw_tbl <- tbl(conn2, "MV_DM_PATIENT_ACCESS")
 amb_mapping <- access_raw_tbl %>%
-  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN) %>%
+  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN, PROV_NAME_WID, NPI) %>%
   summarise(total = n()) %>%
   collect()
 
@@ -347,25 +347,64 @@ amb_mapping <- amb_mapping %>%
                              ifelse(startsWith(DEPARTMENT_NAME,"X_X_"),
                                     gsub('^.{4}', '', DEPARTMENT_NAME),
                                     ifelse(startsWith(DEPARTMENT_NAME,"X_"),
-                                           gsub('^.{2}', '', DEPARTMENT_NAME), DEPARTMENT_NAME))))
+                                           gsub('^.{2}', '', DEPARTMENT_NAME), DEPARTMENT_NAME)))) %>%
+  mutate(PROV_NAME_WID = trimws(gsub("\\[.*?\\]", "", PROV_NAME_WID))) %>%
+  rename(PROV_NAME = PROV_NAME_WID)
+
 
 last_arrived <- access_raw_tbl %>%
   filter(DERIVED_STATUS_DESC == "Arrived") %>%
   group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID) %>%
   mutate(LAST_ARRIVED = max(APPT_DTTM)) %>%
-  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, LAST_ARRIVED) %>%
+  ungroup() %>%
+  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, PROV_NAME_WID, NPI) %>%
+  mutate(LAST_ARRIVED_PROV = max(APPT_DTTM)) %>%
+  ungroup() %>%
+  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, LAST_ARRIVED, PROV_NAME_WID, NPI, LAST_ARRIVED_PROV) %>%
   summarise(total = n()) %>%
-  collect()
+  collect() %>%
+  rename(PROV_NAME = PROV_NAME_WID)
 
-amb_mapping$LAST_ARRIVED <- last_arrived$LAST_ARRIVED[match(amb_mapping$DEPARTMENT_ID, last_arrived$DEPARTMENT_ID)]
-amb_mapping <- amb_mapping %>%
+
+## Site-Department Mapping -----------------------------------------------------
+amb_mapping_dept <- amb_mapping %>%
+  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, Department_Clean, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN) %>%
+  summarise(total = n())
+
+last_arrived_dept <- last_arrived %>%
+  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, LAST_ARRIVED) %>%
+  summarise(total = n())
+
+amb_mapping_dept$LAST_ARRIVED <- last_arrived_dept$LAST_ARRIVED[match(amb_mapping_dept$DEPARTMENT_ID, last_arrived_dept$DEPARTMENT_ID)]
+amb_mapping_dept <- amb_mapping_dept %>%
   mutate(LAST_ARRIVED = as.character(LAST_ARRIVED)) %>%
   rename(CAMPUS = SITE,
          CAMPUS_SPECIALTY = DEPT_SPECIALTY_NAME) %>%
   arrange(CAMPUS, CAMPUS_SPECIALTY) %>%
   dplyr::select(CAMPUS, CAMPUS_SPECIALTY, DEPARTMENT_NAME, Department_Clean, DEPARTMENT_ID, LAST_ARRIVED, DEP_RPT_GRP_ELEVEN)
 
-amb_mapping$total <- NULL
+amb_mapping_dept$total <- NULL
+
+
+
+## Site-Department-Provider Mapping --------------------------------------------
+amb_mapping_prov <- amb_mapping %>%
+  dplyr::select(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, Department_Clean, PROV_NAME, NPI, DEP_RPT_GRP_ELEVEN)
+
+last_arrived_prov <- last_arrived %>%
+  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, PROV_NAME, NPI, LAST_ARRIVED_PROV) %>%
+  summarise(total = n())
+
+amb_mapping_prov <- left_join(amb_mapping_prov, last_arrived_prov[,c("DEPARTMENT_ID", "NPI","LAST_ARRIVED_PROV")], by = c("DEPARTMENT_ID","NPI"))
+
+amb_mapping_prov <- amb_mapping_prov %>%
+  mutate(LAST_ARRIVED_PROV = as.character(LAST_ARRIVED_PROV)) %>%
+  rename(CAMPUS = SITE,
+         CAMPUS_SPECIALTY = DEPT_SPECIALTY_NAME) %>%
+  arrange(CAMPUS, CAMPUS_SPECIALTY) %>%
+  dplyr::select(CAMPUS, CAMPUS_SPECIALTY, DEPARTMENT_NAME, Department_Clean, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN, PROV_NAME, NPI, LAST_ARRIVED_PROV)
+
+amb_mapping_prov$total <- NULL
 
 ```
 
@@ -381,8 +420,8 @@ knitr::include_graphics("Mount_Sinai_Logo_H.png")
 ___________________________________________________________________________________________________________________________________________________________________
 <br/>
 
-## Site Mapping (Grouper 17)
-<span style='font-size: 18px;; color: #d80b8c'>**Epic Site-Specialty-Department Mapping**</span>
+## Epic Site Mapping (Grouper 17)
+<span style='font-size: 18px;; color: #d80b8c'>**Site-Department Mapping**</span>
 ```{r Ambulatory Mapping Output, echo = FALSE, warning = FALSE, message = FALSE}
 
 htmltools::browsable(
@@ -393,7 +432,7 @@ htmltools::browsable(
     ),
 
     reactable(
-      amb_mapping,
+      amb_mapping_dept,
       style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left", 
@@ -450,6 +489,85 @@ htmltools::browsable(
 )
 
 ```
+
+
+<span style='font-size: 18px;; color: #d80b8c'>**Site-Department-Provider Mapping**</span>
+```{r Ambulatory Mapping Output, echo = FALSE, warning = FALSE, message = FALSE}
+
+htmltools::browsable(
+  tagList(
+    tags$button(
+      tagList(fontawesome::fa("download"), "Download Latest Ambulatory Provider Mapping (Grouper 17)"),
+      onclick = "Reactable.downloadDataCSV('amb-prov-download-table', 'Ambulatory Provider Mapping (Grouper 17')"
+    ),
+
+    reactable(
+      amb_mapping_prov,
+      style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left", 
+                           headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+    searchable = TRUE,
+    
+    groupBy = c("CAMPUS","CAMPUS_SPECIALTY"),
+    elementId = "amb-prov-download-table",
+    
+    columns = list(
+    
+    CAMPUS = colDef(
+      # footer = "Total",
+      name = "Site",
+      minWidth = 100),
+    
+    CAMPUS_SPECIALTY = colDef(
+      # footer = "Total",
+      name = "Specialty",
+      minWidth = 100),
+    
+    DEPARTMENT_NAME = colDef(
+      # footer = "Total",
+      name = "Department Name (Original)",
+      minWidth = 180),
+    
+    Department_Clean = colDef(
+      # footer = "Total",
+      name = "Department Name (Consolidated)",
+      minWidth = 180),
+    
+    DEPARTMENT_ID = colDef(
+      # footer = "Total",
+      name = "Department ID"),
+    
+    DEP_RPT_GRP_ELEVEN = colDef(
+      # footer = "Total",
+      name = "A28 vs. Non-A28"),
+    
+    PROV_NAME = colDef(
+      # footer = "Total",
+      name = "PROVIDER NAME"),
+    
+    NPI = colDef(
+      # footer = "Total",
+      name = "NPI"),
+    
+    LAST_ARRIVED_PROV = colDef(
+      # footer = "Total",
+      name = "Last Arrived Visit Date")
+    
+    )
+
+    )
+  )
+)
+
+```
+
 
 
 <!-- ## NY Zip Code Mapping -->
