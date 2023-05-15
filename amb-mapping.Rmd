@@ -421,6 +421,7 @@ ________________________________________________________________________________
 <br/>
 
 ## Epic Site Mapping (Grouper 17)
+### Site-Department
 <span style='font-size: 18px;; color: #d80b8c'>**Site-Department Mapping**</span>
 ```{r Ambulatory Mapping Output, echo = FALSE, warning = FALSE, message = FALSE}
 
@@ -491,6 +492,7 @@ htmltools::browsable(
 ```
 
 
+### Site-Department-Provider
 <span style='font-size: 18px;; color: #d80b8c'>**Site-Department-Provider Mapping**</span>
 ```{r Ambulatory Mapping Output, echo = FALSE, warning = FALSE, message = FALSE}
 
