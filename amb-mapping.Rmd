@@ -123,7 +123,7 @@ suppressMessages({
   library(ggplot2)
   library(leaflet)
   library(readr)
-  library(highcharter)
+  # library(highcharter)
   library(ggforce) # for 'geom_arc_bar'
   library(packcircles) # for packed circle graph
   library(viridis)
@@ -340,6 +340,7 @@ amb_mapping <- access_raw_tbl %>%
   group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN, PROV_NAME_WID, NPI) %>%
   summarise(total = n()) %>%
   collect()
+
 
 amb_mapping <- amb_mapping %>%
   mutate(Department_Clean = ifelse(str_detect(DEPARTMENT_NAME, "_DEACTIVATED"),
