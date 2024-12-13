@@ -307,37 +307,23 @@ reporting_monthNum <- format(as.Date(report_run_date), "%m")
 ```{r Import Data, echo = FALSE, warning = FALSE, message = FALSE}
 
 # Connection to Oracle DB ------------------------------------------------------
-# conn1 <- dbPool(drv = odbc(), dsn = "OAO Cloud DB SoYoun", timeout = 30)
+conn1 <- dbPool(drv = odbc(), dsn = "OAO Cloud DB SoYoun", timeout = 30)
 conn2 <- dbConnect(odbc(), 
                   "Clarity_prod", 
                   uid = "kweons01" , 
                   pwd = "kweons01123$")
 
+access_raw_tbl <- tbl(conn1, "MV_DM_PATIENT_ACCESS")
+clarity_ser_myc_tbl <- tbl(conn2, "CLARITY_SER_MYC") # Ticket scheduling enabled status
 
-# Import Slot Availability Data ------------------------------------------------
-# slot_raw_tbl <- tbl(conn1, "Y_DM_BOOKED_FILLED_RATE")
-# access_raw_tbl <- tbl(conn1, "MV_DM_PATIENT_ACCESS")
-# availability_raw_tbl <- tbl(conn2, "V_AVAILABILITY")
-# block_raw_tbl <- tbl(conn2, "AVAIL_BLOCK")
-# block_name_tbl <- tbl(conn2, "ZC_APPT_BLOCK")
-# orders_raw_tbl <- tbl(conn2, "ORDER_PROC")
-
-# Import Slot Availability Data ------------------------------------------------
-# slot_raw_tbl <- tbl(conn1, "Y_DM_BOOKED_FILLED_RATE")
-# access_raw_tbl <- tbl(conn1, "MV_DM_PATIENT_ACCESS")
-
-# amb_mapping <- tbl(conn1, in_schema("VILLEA04", "AMBULATORY_MAPPING"))
-# 
-# amb_mapping <- amb_mapping %>%
-#   collect() %>%
-#   arrange(CAMPUS, CAMPUS_SPECIALTY) %>%
-#   mutate(LAST_ARRIVED = as.character(LAST_ARRIVED))
+```
 
 
-# Using Clarity ----------------------------------------------------------------
-access_raw_tbl <- tbl(conn2, "MV_DM_PATIENT_ACCESS")
+```{r Create base tables based on access table, echo = FALSE, warning = FALSE, message = FALSE}
+
+# Create Tables ----------------------------------------------------------------
 amb_mapping <- access_raw_tbl %>%
-  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN, PROV_NAME_WID, NPI) %>%
+  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN, PROV_NAME_WID, PROV_ID, NPI) %>%
   summarise(total = n()) %>%
   collect()
 
@@ -366,6 +352,10 @@ last_arrived <- access_raw_tbl %>%
   collect() %>%
   rename(PROV_NAME = PROV_NAME_WID)
 
+```
+
+
+```{r Create site-department mapping, , echo = FALSE, warning = FALSE, message = FALSE}
 
 ## Site-Department Mapping -----------------------------------------------------
 amb_mapping_dept <- amb_mapping %>%
@@ -387,10 +377,17 @@ amb_mapping_dept <- amb_mapping_dept %>%
 amb_mapping_dept$total <- NULL
 
 
+```
+
+
+```{r Create site-department-provider mapping, echo = FALSE, warning = FALSE, message = FALSE}
+
+clarity_ser_myc <- clarity_ser_myc_tbl %>%
+  collect()
 
 ## Site-Department-Provider Mapping --------------------------------------------
 amb_mapping_prov <- amb_mapping %>%
-  dplyr::select(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, Department_Clean, PROV_NAME, NPI, DEP_RPT_GRP_ELEVEN)
+  dplyr::select(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, Department_Clean, PROV_NAME, NPI, PROV_ID, DEP_RPT_GRP_ELEVEN)
 
 last_arrived_prov <- last_arrived %>%
   group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, PROV_NAME, NPI, LAST_ARRIVED_PROV) %>%
@@ -399,16 +396,17 @@ last_arrived_prov <- last_arrived %>%
 amb_mapping_prov <- left_join(amb_mapping_prov, last_arrived_prov[,c("DEPARTMENT_ID", "NPI","LAST_ARRIVED_PROV")], by = c("DEPARTMENT_ID","NPI"))
 
 amb_mapping_prov <- amb_mapping_prov %>%
+  left_join(clarity_ser_myc %>% collect(PROV_ID, TKT_SCH_YN),
+            by = "PROV_ID") %>%
+  mutate(TKT_SCH_YN = ifelse(is.na(TKT_SCH_YN), "N", ifelse(TKT_SCH_YN == 1, "Y", "N"))) %>%
   mutate(LAST_ARRIVED_PROV = as.character(LAST_ARRIVED_PROV)) %>%
   rename(CAMPUS = SITE,
          CAMPUS_SPECIALTY = DEPT_SPECIALTY_NAME) %>%
   arrange(CAMPUS, CAMPUS_SPECIALTY) %>%
-  dplyr::select(CAMPUS, CAMPUS_SPECIALTY, DEPARTMENT_NAME, Department_Clean, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN, PROV_NAME, NPI, LAST_ARRIVED_PROV)
+  dplyr::select(CAMPUS, CAMPUS_SPECIALTY, DEPARTMENT_NAME, Department_Clean, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN, PROV_NAME, NPI, PROV_ID, TKT_SCH_YN, LAST_ARRIVED_PROV)
 
 amb_mapping_prov$total <- NULL
-
 ```
-
 
 
 ```{r Sinai Logo, echo=FALSE, out.width = '30%'}
@@ -558,6 +556,14 @@ htmltools::browsable(
     NPI = colDef(
       # footer = "Total",
       name = "NPI"),
+    
+    PROV_ID = colDef(
+      # footer = "Total",
+      name = "PROV_ID"),
+    
+    TKT_SCH_YN = colDef(
+      # footer = "Total",
+      name = "Ticket Scheduling Enabled?"),
     
     LAST_ARRIVED_PROV = colDef(
       # footer = "Total",
