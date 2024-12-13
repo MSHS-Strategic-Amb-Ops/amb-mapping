@@ -559,7 +559,7 @@ htmltools::browsable(
     
     PROV_ID = colDef(
       # footer = "Total",
-      name = "PROV_ID"),
+      name = "PROV ID"),
     
     TKT_SCH_YN = colDef(
       # footer = "Total",
