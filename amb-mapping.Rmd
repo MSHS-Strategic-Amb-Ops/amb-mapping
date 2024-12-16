@@ -315,6 +315,7 @@ conn2 <- dbConnect(odbc(),
 
 access_raw_tbl <- tbl(conn1, "MV_DM_PATIENT_ACCESS")
 clarity_ser_myc_tbl <- tbl(conn2, "CLARITY_SER_MYC") # Ticket scheduling enabled status
+clarity_ser_tbl <- tbl(conn2, "CLARITY_SER") # Physician Titles
 
 ```
 
@@ -398,12 +399,16 @@ amb_mapping_prov <- left_join(amb_mapping_prov, last_arrived_prov[,c("DEPARTMENT
 amb_mapping_prov <- amb_mapping_prov %>%
   left_join(clarity_ser_myc %>% collect(PROV_ID, TKT_SCH_YN),
             by = "PROV_ID") %>%
+  left_join(clarity_ser_tbl %>%
+              dplyr::select(PROV_ID,  PROV_TYPE),
+            by = "PROV_ID",
+            copy = T) %>%
   mutate(TKT_SCH_YN = ifelse(is.na(TKT_SCH_YN), "N", ifelse(TKT_SCH_YN == 1, "Y", "N"))) %>%
   mutate(LAST_ARRIVED_PROV = as.character(LAST_ARRIVED_PROV)) %>%
   rename(CAMPUS = SITE,
          CAMPUS_SPECIALTY = DEPT_SPECIALTY_NAME) %>%
   arrange(CAMPUS, CAMPUS_SPECIALTY) %>%
-  dplyr::select(CAMPUS, CAMPUS_SPECIALTY, DEPARTMENT_NAME, Department_Clean, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN, PROV_NAME, NPI, PROV_ID, TKT_SCH_YN, LAST_ARRIVED_PROV)
+  dplyr::select(CAMPUS, CAMPUS_SPECIALTY, DEPARTMENT_NAME, Department_Clean, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN, PROV_NAME, NPI, PROV_ID, PROV_TYPE, TKT_SCH_YN, LAST_ARRIVED_PROV)
 
 amb_mapping_prov$total <- NULL
 ```
@@ -557,9 +562,9 @@ htmltools::browsable(
       # footer = "Total",
       name = "NPI"),
     
-    PROV_ID = colDef(
+    PROV_TYPE = colDef(
       # footer = "Total",
-      name = "PROV ID"),
+      name = "PROV TYPE"),
     
     TKT_SCH_YN = colDef(
       # footer = "Total",
@@ -567,7 +572,9 @@ htmltools::browsable(
     
     LAST_ARRIVED_PROV = colDef(
       # footer = "Total",
-      name = "Last Arrived Visit Date")
+      name = "Last Arrived Visit Date"),
+    
+    PROV_ID = colDef(show =F)
     
     )
 
