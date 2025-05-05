@@ -313,7 +313,7 @@ conn2 <- dbConnect(odbc(),
                   uid = "kweons01" , 
                   pwd = "kweons01123$")
 
-access_raw_tbl <- tbl(conn1, "MV_DM_PATIENT_ACCESS")
+access_raw_tbl <- tbl(conn2, "MV_DM_PATIENT_ACCESS")
 clarity_ser_myc_tbl <- tbl(conn2, "CLARITY_SER_MYC") # Ticket scheduling enabled status
 clarity_ser_tbl <- tbl(conn2, "CLARITY_SER") # Physician Titles
 
