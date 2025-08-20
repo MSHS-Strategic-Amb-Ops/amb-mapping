@@ -336,8 +336,7 @@ amb_mapping <- amb_mapping %>%
                                     gsub('^.{4}', '', DEPARTMENT_NAME),
                                     ifelse(startsWith(DEPARTMENT_NAME,"X_"),
                                            gsub('^.{2}', '', DEPARTMENT_NAME), DEPARTMENT_NAME)))) %>%
-  mutate(PROV_NAME_WID = trimws(gsub("\\[.*?\\]", "", PROV_NAME_WID))) %>%
-  rename(PROV_NAME = PROV_NAME_WID)
+  mutate(PROV_NAME = trimws(gsub("\\[.*?\\]", "", PROV_NAME_WID))) 
 
 
 last_arrived <- access_raw_tbl %>%
@@ -388,10 +387,10 @@ clarity_ser_myc <- clarity_ser_myc_tbl %>%
 
 ## Site-Department-Provider Mapping --------------------------------------------
 amb_mapping_prov <- amb_mapping %>%
-  dplyr::select(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, Department_Clean, PROV_NAME, NPI, PROV_ID, DEP_RPT_GRP_ELEVEN)
+  dplyr::select(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, Department_Clean, PROV_NAME, PROV_NAME_WID, NPI, PROV_ID, DEP_RPT_GRP_ELEVEN)
 
 last_arrived_prov <- last_arrived %>%
-  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, PROV_NAME, NPI, LAST_ARRIVED_PROV) %>%
+  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, PROV_NAME, PROV_NAME_WID, NPI, LAST_ARRIVED_PROV) %>%
   summarise(total = n())
 
 amb_mapping_prov <- left_join(amb_mapping_prov, last_arrived_prov[,c("DEPARTMENT_ID", "NPI","LAST_ARRIVED_PROV")], by = c("DEPARTMENT_ID","NPI"))
@@ -557,6 +556,10 @@ htmltools::browsable(
     PROV_NAME = colDef(
       # footer = "Total",
       name = "PROVIDER NAME"),
+    
+    PROV_NAME_WID = colDef(
+      # footer = "Total",
+      name = "PROVIDER NAME WID"),
     
     NPI = colDef(
       # footer = "Total",
