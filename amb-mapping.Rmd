@@ -349,8 +349,7 @@ last_arrived <- access_raw_tbl %>%
   ungroup() %>%
   group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, LAST_ARRIVED, PROV_NAME_WID, NPI, LAST_ARRIVED_PROV) %>%
   summarise(total = n()) %>%
-  collect() %>%
-  rename(PROV_NAME = PROV_NAME_WID)
+  collect() 
 
 ```
 
@@ -390,7 +389,7 @@ amb_mapping_prov <- amb_mapping %>%
   dplyr::select(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, Department_Clean, PROV_NAME, PROV_NAME_WID, NPI, PROV_ID, DEP_RPT_GRP_ELEVEN)
 
 last_arrived_prov <- last_arrived %>%
-  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, PROV_NAME, PROV_NAME_WID, NPI, LAST_ARRIVED_PROV) %>%
+  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, PROV_NAME_WID, NPI, LAST_ARRIVED_PROV) %>%
   summarise(total = n())
 
 amb_mapping_prov <- left_join(amb_mapping_prov, last_arrived_prov[,c("DEPARTMENT_ID", "NPI","LAST_ARRIVED_PROV")], by = c("DEPARTMENT_ID","NPI"))
@@ -407,7 +406,7 @@ amb_mapping_prov <- amb_mapping_prov %>%
   rename(CAMPUS = SITE,
          CAMPUS_SPECIALTY = DEPT_SPECIALTY_NAME) %>%
   arrange(CAMPUS, CAMPUS_SPECIALTY) %>%
-  dplyr::select(CAMPUS, CAMPUS_SPECIALTY, DEPARTMENT_NAME, Department_Clean, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN, PROV_NAME, NPI, PROV_ID, PROV_TYPE, TKT_SCH_YN, LAST_ARRIVED_PROV)
+  dplyr::select(CAMPUS, CAMPUS_SPECIALTY, DEPARTMENT_NAME, Department_Clean, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN, PROV_NAME, PROV_NAME_WID, NPI, PROV_ID, PROV_TYPE, TKT_SCH_YN, LAST_ARRIVED_PROV)
 
 amb_mapping_prov$total <- NULL
 ```
