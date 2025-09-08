@@ -313,102 +313,46 @@ conn2 <- dbConnect(odbc(),
                   uid = "kweons01" , 
                   pwd = "kweons01123$")
 
-access_raw_tbl <- tbl(conn2, "MV_DM_PATIENT_ACCESS")
+access_raw_tbl <- tbl(conn1, "MV_DM_PATIENT_ACCESS")
+clarity_ser_tbl <- tbl(conn1, "CLARITY_SER") # Physician Titles
+clarity_ser_2_tbl <- tbl(conn1, "CLARITY_SER_2") # Physician Titles
+
 clarity_ser_myc_tbl <- tbl(conn2, "CLARITY_SER_MYC") # Ticket scheduling enabled status
-clarity_ser_tbl <- tbl(conn2, "CLARITY_SER") # Physician Titles
 
 ```
 
 
-```{r Create base tables based on access table, echo = FALSE, warning = FALSE, message = FALSE}
-
-# Create Tables ----------------------------------------------------------------
-amb_mapping <- access_raw_tbl %>%
-  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN, PROV_NAME_WID, PROV_ID, NPI) %>%
-  summarise(total = n()) %>%
-  collect()
+```{r}
 
 
-amb_mapping <- amb_mapping %>%
-  mutate(Department_Clean = ifelse(str_detect(DEPARTMENT_NAME, "_DEACTIVATED"),
-                             gsub('^.{2}|.{12}$', '', DEPARTMENT_NAME),
-                             ifelse(startsWith(DEPARTMENT_NAME,"X_X_"),
-                                    gsub('^.{4}', '', DEPARTMENT_NAME),
-                                    ifelse(startsWith(DEPARTMENT_NAME,"X_"),
-                                           gsub('^.{2}', '', DEPARTMENT_NAME), DEPARTMENT_NAME)))) %>%
-  mutate(PROV_NAME = trimws(gsub("\\[.*?\\]", "", PROV_NAME_WID))) 
-
-
-last_arrived <- access_raw_tbl %>%
-  filter(DERIVED_STATUS_DESC == "Arrived") %>%
-  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID) %>%
-  mutate(LAST_ARRIVED = max(APPT_DTTM)) %>%
-  ungroup() %>%
-  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, PROV_NAME_WID, NPI) %>%
-  mutate(LAST_ARRIVED_PROV = max(APPT_DTTM)) %>%
-  ungroup() %>%
-  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, LAST_ARRIVED, PROV_NAME_WID, NPI, LAST_ARRIVED_PROV) %>%
-  summarise(total = n()) %>%
+amb_mapping_dept <- access_raw_tbl %>%
+  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN) %>%
+  summarise(LAST_ARRIVAL_DATE = max(CONTACT_DATE[DERIVED_STATUS_DESC == "Arrived"])) %>%
+  arrange(SITE, DEPARTMENT_NAME) %>%
   collect() 
+  
 
-```
-
-
-```{r Create site-department mapping, , echo = FALSE, warning = FALSE, message = FALSE}
-
-## Site-Department Mapping -----------------------------------------------------
-amb_mapping_dept <- amb_mapping %>%
-  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, Department_Clean, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN) %>%
-  summarise(total = n())
-
-last_arrived_dept <- last_arrived %>%
-  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, LAST_ARRIVED) %>%
-  summarise(total = n())
-
-amb_mapping_dept$LAST_ARRIVED <- last_arrived_dept$LAST_ARRIVED[match(amb_mapping_dept$DEPARTMENT_ID, last_arrived_dept$DEPARTMENT_ID)]
-amb_mapping_dept <- amb_mapping_dept %>%
-  mutate(LAST_ARRIVED = as.character(LAST_ARRIVED)) %>%
-  rename(CAMPUS = SITE,
-         CAMPUS_SPECIALTY = DEPT_SPECIALTY_NAME) %>%
-  arrange(CAMPUS, CAMPUS_SPECIALTY) %>%
-  dplyr::select(CAMPUS, CAMPUS_SPECIALTY, DEPARTMENT_NAME, Department_Clean, DEPARTMENT_ID, LAST_ARRIVED, DEP_RPT_GRP_ELEVEN)
-
-amb_mapping_dept$total <- NULL
-
-
-```
-
-
-```{r Create site-department-provider mapping, echo = FALSE, warning = FALSE, message = FALSE}
-
-clarity_ser_myc <- clarity_ser_myc_tbl %>%
-  collect()
-
-## Site-Department-Provider Mapping --------------------------------------------
-amb_mapping_prov <- amb_mapping %>%
-  dplyr::select(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, Department_Clean, PROV_NAME, PROV_NAME_WID, NPI, PROV_ID, DEP_RPT_GRP_ELEVEN)
-
-last_arrived_prov <- last_arrived %>%
-  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, PROV_NAME_WID, NPI, LAST_ARRIVED_PROV) %>%
-  summarise(total = n())
-
-amb_mapping_prov <- left_join(amb_mapping_prov, last_arrived_prov[,c("DEPARTMENT_ID", "NPI","LAST_ARRIVED_PROV")], by = c("DEPARTMENT_ID","NPI"))
-
-amb_mapping_prov <- amb_mapping_prov %>%
-  left_join(clarity_ser_myc %>% collect(PROV_ID, TKT_SCH_YN),
-            by = "PROV_ID") %>%
+amb_mapping_prov <- access_raw_tbl %>%
+  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN, PROV_NAME_WID, PROV_ID, NPI) %>%
+  summarise(LAST_ARRIVAL_DATE = max(CONTACT_DATE[DERIVED_STATUS_DESC == "Arrived"])) %>%
+  arrange(SITE, DEPARTMENT_NAME, PROV_NAME_WID) %>%
   left_join(clarity_ser_tbl %>%
               dplyr::select(PROV_ID,  PROV_TYPE),
             by = "PROV_ID",
             copy = T) %>%
-  mutate(TKT_SCH_YN = ifelse(is.na(TKT_SCH_YN), "N", ifelse(TKT_SCH_YN == 1, "Y", "N"))) %>%
-  mutate(LAST_ARRIVED_PROV = as.character(LAST_ARRIVED_PROV)) %>%
-  rename(CAMPUS = SITE,
-         CAMPUS_SPECIALTY = DEPT_SPECIALTY_NAME) %>%
-  arrange(CAMPUS, CAMPUS_SPECIALTY) %>%
-  dplyr::select(CAMPUS, CAMPUS_SPECIALTY, DEPARTMENT_NAME, Department_Clean, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN, PROV_NAME, PROV_NAME_WID, NPI, PROV_ID, PROV_TYPE, TKT_SCH_YN, LAST_ARRIVED_PROV)
+  collect()
 
-amb_mapping_prov$total <- NULL
+clarity_ser_myc <- clarity_ser_myc_tbl %>%
+  dplyr::select(PROV_ID, TKT_SCH_YN) %>%
+  collect()
+
+amb_mapping_prov <- amb_mapping_prov %>%
+  arrange(SITE, DEPARTMENT_NAME) %>%
+  left_join(clarity_ser_myc) %>%
+  mutate(TKT_SCH_YN = ifelse(is.na(TKT_SCH_YN), "N", ifelse(TKT_SCH_YN == 1, "Y", "N"))) %>%
+  dplyr::select(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN, PROV_NAME_WID, PROV_NAME_WID, NPI, PROV_ID, PROV_TYPE, TKT_SCH_YN, LAST_ARRIVAL_DATE)
+
+
 ```
 
 
@@ -448,17 +392,17 @@ htmltools::browsable(
     wrap = TRUE,
     searchable = TRUE,
     
-    groupBy = c("CAMPUS"),
+    groupBy = c("SITE"),
     elementId = "amb-download-table",
     
     columns = list(
     
-    CAMPUS = colDef(
+    SITE = colDef(
       # footer = "Total",
       name = "Site",
       minWidth = 100),
     
-    CAMPUS_SPECIALTY = colDef(
+    DEPT_SPECIALTY_NAME = colDef(
       # footer = "Total",
       name = "Specialty",
       minWidth = 100),
@@ -468,22 +412,18 @@ htmltools::browsable(
       name = "Department Name (Original)",
       minWidth = 180),
     
-    Department_Clean = colDef(
-      # footer = "Total",
-      name = "Department Name (Consolidated)",
-      minWidth = 180),
     
     DEPARTMENT_ID = colDef(
       # footer = "Total",
       name = "Department ID"),
     
-    LAST_ARRIVED = colDef(
+    LAST_ARRIVAL_DATE = colDef(
       # footer = "Total",
       name = "Last Arrived Visit Date"),
     
     DEP_RPT_GRP_ELEVEN = colDef(
       # footer = "Total",
-      name = "A28 vs. Non-A28")
+      minWidth = 180)
     
     )
 
@@ -519,17 +459,17 @@ htmltools::browsable(
     wrap = TRUE,
     searchable = TRUE,
     
-    groupBy = c("CAMPUS","CAMPUS_SPECIALTY"),
+    groupBy = c("SITE","DEPT_SPECIALTY_NAME"),
     elementId = "amb-prov-download-table",
     
     columns = list(
     
-    CAMPUS = colDef(
+    SITE = colDef(
       # footer = "Total",
       name = "Site",
       minWidth = 100),
     
-    CAMPUS_SPECIALTY = colDef(
+    DEPT_SPECIALTY_NAME = colDef(
       # footer = "Total",
       name = "Specialty",
       minWidth = 100),
@@ -539,10 +479,6 @@ htmltools::browsable(
       name = "Department Name (Original)",
       minWidth = 180),
     
-    Department_Clean = colDef(
-      # footer = "Total",
-      name = "Department Name (Consolidated)",
-      minWidth = 180),
     
     DEPARTMENT_ID = colDef(
       # footer = "Total",
@@ -550,15 +486,11 @@ htmltools::browsable(
     
     DEP_RPT_GRP_ELEVEN = colDef(
       # footer = "Total",
-      name = "A28 vs. Non-A28"),
-    
-    PROV_NAME = colDef(
-      # footer = "Total",
-      name = "PROVIDER NAME"),
+       minWidth = 120),
     
     PROV_NAME_WID = colDef(
       # footer = "Total",
-      name = "PROVIDER NAME WID"),
+      name = "Provider Name"),
     
     NPI = colDef(
       # footer = "Total",
@@ -566,7 +498,7 @@ htmltools::browsable(
     
     PROV_TYPE = colDef(
       # footer = "Total",
-      name = "PROV TYPE"),
+      name = "Prov Type"),
     
     TKT_SCH_YN = colDef(
       # footer = "Total",
@@ -583,25 +515,6 @@ htmltools::browsable(
     )
   )
 )
-
-```
-
-
-
-<!-- ## NY Zip Code Mapping -->
-<!-- <span style='font-size: 18px;; color: #d80b8c'>**NYS Zip Code Mapping for Ambulatory Analytics Tool Population (Unique Patients by Zip Code) Analysis**</span> -->
-```{r NYS Zip Code Analysis, echo = FALSE, warning = FALSE, message = FALSE}
-
-# amb_zipcode_raw <- tbl(conn1, in_schema("VILLEA04", "ZIP_CODE_LAYER"))
-# amb_zipcode <- amb_zipcode_raw %>%
-#   collect()
-# 
-# amb_population_raw <- tbl(conn1, in_schema("VILLEA04", "AMBULATORY_POPULATION"))
-# amb_population_data <- amb_population_raw %>%
-#   group_by(ZIP_CODE, NEW_ZIP, CITY, STATES, ZIP_CODE_LAYER_A, ZIP_CODE_LAYER_B, ZIP_CODE_LAYER_C, NEW_ZIP_CODE_LAYER_A, NEW_ZIP_CODE_LAYER_B) %>%
-#   summarise(total = n()) %>%
-#   collect()
-# 
 
 ```
 
