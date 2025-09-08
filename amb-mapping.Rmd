@@ -411,7 +411,7 @@ htmltools::browsable(
     
     DEPARTMENT_NAME = colDef(
       # footer = "Total",
-      name = "Department Name (Original)",
+      name = "Department Name",
       minWidth = 180),
     
     
@@ -506,7 +506,7 @@ htmltools::browsable(
       # footer = "Total",
       name = "Ticket Scheduling Enabled?"),
     
-    LAST_ARRIVED_PROV = colDef(
+    LAST_ARRIVAL_DATE = colDef(
       # footer = "Total",
       name = "Last Arrived Visit Date"),
     
