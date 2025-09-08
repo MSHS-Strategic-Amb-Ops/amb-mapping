@@ -329,7 +329,8 @@ amb_mapping_dept <- access_raw_tbl %>%
   group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN) %>%
   summarise(LAST_ARRIVAL_DATE = max(CONTACT_DATE[DERIVED_STATUS_DESC == "Arrived"])) %>%
   arrange(SITE, DEPARTMENT_NAME) %>%
-  collect() 
+  collect() %>%
+  mutate(LAST_ARRIVAL_DATE = as.character(LAST_ARRIVAL_DATE))
   
 
 amb_mapping_prov <- access_raw_tbl %>%
@@ -340,7 +341,8 @@ amb_mapping_prov <- access_raw_tbl %>%
               dplyr::select(PROV_ID,  PROV_TYPE),
             by = "PROV_ID",
             copy = T) %>%
-  collect()
+  collect() %>%
+  mutate(LAST_ARRIVAL_DATE = as.character(LAST_ARRIVAL_DATE))
 
 clarity_ser_myc <- clarity_ser_myc_tbl %>%
   dplyr::select(PROV_ID, TKT_SCH_YN) %>%
