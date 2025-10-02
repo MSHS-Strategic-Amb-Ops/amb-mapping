@@ -327,22 +327,26 @@ clarity_ser_myc_tbl <- tbl(conn2, "CLARITY_SER_MYC") # Ticket scheduling enabled
 
 amb_mapping_dept <- access_raw_tbl %>%
   group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN) %>%
-  summarise(LAST_ARRIVAL_DATE = max(CONTACT_DATE[DERIVED_STATUS_DESC == "Arrived"])) %>%
+  summarise(FIRST_ARRIVAL_DATE = min(CONTACT_DATE[DERIVED_STATUS_DESC == "Arrived"]),
+            LAST_ARRIVAL_DATE = max(CONTACT_DATE[DERIVED_STATUS_DESC == "Arrived"])) %>%
   arrange(SITE, DEPARTMENT_NAME) %>%
   collect() %>%
-  mutate(LAST_ARRIVAL_DATE = as.character(LAST_ARRIVAL_DATE))
+  mutate(FIRST_ARRIVAL_DATE = as.character(LAST_ARRIVAL_DATE),
+         LAST_ARRIVAL_DATE = as.character(LAST_ARRIVAL_DATE))
   
 
 amb_mapping_prov <- access_raw_tbl %>%
   group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN, PROV_NAME_WID, PROV_ID, NPI) %>%
-  summarise(LAST_ARRIVAL_DATE = max(CONTACT_DATE[DERIVED_STATUS_DESC == "Arrived"])) %>%
+  summarise(FIRST_ARRIVAL_DATE = min(CONTACT_DATE[DERIVED_STATUS_DESC == "Arrived"]),
+            LAST_ARRIVAL_DATE = max(CONTACT_DATE[DERIVED_STATUS_DESC == "Arrived"])) %>%
   arrange(SITE, DEPARTMENT_NAME, PROV_NAME_WID) %>%
   left_join(clarity_ser_tbl %>%
               dplyr::select(PROV_ID,  PROV_TYPE),
             by = "PROV_ID",
             copy = T) %>%
   collect() %>%
-  mutate(LAST_ARRIVAL_DATE = as.character(LAST_ARRIVAL_DATE))
+  mutate(FIRST_ARRIVAL_DATE = as.character(LAST_ARRIVAL_DATE),
+         LAST_ARRIVAL_DATE = as.character(LAST_ARRIVAL_DATE))
 
 clarity_ser_myc <- clarity_ser_myc_tbl %>%
   dplyr::select(PROV_ID, TKT_SCH_YN) %>%
@@ -352,7 +356,7 @@ amb_mapping_prov <- amb_mapping_prov %>%
   arrange(SITE, DEPARTMENT_NAME) %>%
   left_join(clarity_ser_myc) %>%
   mutate(TKT_SCH_YN = ifelse(is.na(TKT_SCH_YN), "N", ifelse(TKT_SCH_YN == 1, "Y", "N"))) %>%
-  dplyr::select(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN, PROV_NAME_WID, PROV_NAME_WID, NPI, PROV_ID, PROV_TYPE, TKT_SCH_YN, LAST_ARRIVAL_DATE)
+  dplyr::select(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, DEP_RPT_GRP_ELEVEN, PROV_NAME_WID, PROV_NAME_WID, NPI, PROV_ID, PROV_TYPE, TKT_SCH_YN, FIRST_ARRIVAL_DATE, LAST_ARRIVAL_DATE)
 
 
 ```
@@ -419,9 +423,13 @@ htmltools::browsable(
       # footer = "Total",
       name = "Department ID"),
     
+    FIRST_ARRIVAL_DATE = colDef(
+      # footer = "Total",
+      name = "FIRST Arrival Date"),
+    
     LAST_ARRIVAL_DATE = colDef(
       # footer = "Total",
-      name = "Last Arrived Visit Date"),
+      name = "Last Arrival Date"),
     
     DEP_RPT_GRP_ELEVEN = colDef(
       # footer = "Total",
@@ -506,9 +514,13 @@ htmltools::browsable(
       # footer = "Total",
       name = "Ticket Scheduling Enabled?"),
     
+    FIRST_ARRIVAL_DATE = colDef(
+      # footer = "Total",
+      name = "FIRST Arrival Date"),
+    
     LAST_ARRIVAL_DATE = colDef(
       # footer = "Total",
-      name = "Last Arrived Visit Date"),
+      name = "Last Arrival Date"),
     
     PROV_ID = colDef(show =F)
     
