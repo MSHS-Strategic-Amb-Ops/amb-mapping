@@ -425,7 +425,7 @@ htmltools::browsable(
     
     FIRST_ARRIVAL_DATE = colDef(
       # footer = "Total",
-      name = "FIRST Arrival Date"),
+      name = "First Arrival Date"),
     
     LAST_ARRIVAL_DATE = colDef(
       # footer = "Total",
@@ -516,7 +516,7 @@ htmltools::browsable(
     
     FIRST_ARRIVAL_DATE = colDef(
       # footer = "Total",
-      name = "FIRST Arrival Date"),
+      name = "First Arrival Date"),
     
     LAST_ARRIVAL_DATE = colDef(
       # footer = "Total",
